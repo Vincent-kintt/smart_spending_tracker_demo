@@ -31,15 +31,19 @@ const upload = multer({
 // Define port
 const PORT = process.env.PORT || 3000;
 
-// Database connection and collection reference
-let db;
-let expensesCollection;
-let imagesCollection;
-
 // OpenAI API details
 const OPENAI_API_URL = 'https://openapi.monica.im/v1/chat/completions';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+// Serverless-friendly DB connection
+let dbConnection = null;
+async function getDB() {
+  if (!dbConnection) {
+    console.log('Connecting to MongoDB...');
+    dbConnection = await connectToDB();
+  }
+  return dbConnection;
+}
 
 //Function to convert image buffer to base64
 function imageToBase64(buffer, mimeType) {
@@ -147,6 +151,10 @@ Examples:
 
 async function saveImagesToDB(images) {
   try {
+    // Get DB connection and collection for THIS request
+    const db = await getDB();
+    const imagesCollection = db.collection('images');
+    
     const savedImages = [];
     
     for (const image of images) {
@@ -156,8 +164,8 @@ async function saveImagesToDB(images) {
         data: new Binary(image.buffer),
         size: image.size,
         uploadedAt: new Date()
-      };
-      
+        };
+        
       const result = await imagesCollection.insertOne(imageDoc);
       
       if (result.acknowledged) {
@@ -165,8 +173,8 @@ async function saveImagesToDB(images) {
           _id: result.insertedId,
           filename: image.originalname,
           size: image.size
-        });
-      }
+      });
+    }
     }
     
     return savedImages;
@@ -180,6 +188,9 @@ async function saveImagesToDB(images) {
 //Function to parse and save expenses to MongoDB
 async function saveExpensesToDB(aiResponse, imageIds = []) {
   try {
+    // Get DB connection and collection for THIS request
+    const db = await getDB();
+    const expensesCollection = db.collection('expenses');
     
     const responseText = typeof aiResponse === 'string' ? aiResponse : aiResponse.toString();
 
@@ -296,37 +307,42 @@ app.post('/api/chat', upload.array('images', 5), async (req, res) => {
   }
 });
 
-
-
-
 //main HTML page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Initialize database connection and start server
-async function startServer() {
-  try {
-    // Connect to the database
-    db = await connectToDB();
-    
-    expensesCollection = db.collection('expenses');
-    imagesCollection = db.collection('images');
-    
-    // Create indexes for better performance
-    await expensesCollection.createIndex({ createdAt: -1 });
-    await imagesCollection.createIndex({ uploadedAt: -1 });
-    
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-      console.log(`Open http://localhost:${PORT} in your browser to use the chatbot`);
-    });
-  } catch (error) {
-    console.error('Failed to connect to the database:', error);
-    process.exit(1);
+// Only start the server if not in production (Vercel)
+if (process.env.NODE_ENV !== 'production') {
+  // Initialize database connection and start server
+  async function startServer() {
+    try {
+      // Connect to the database
+      await getDB();
+      
+      // Create indexes for better performance
+      const db = await getDB();
+      await db.collection('expenses').createIndex({ createdAt: -1 });
+      await db.collection('images').createIndex({ uploadedAt: -1 });
+      
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Open http://localhost:${PORT} in your browser to use the chatbot`);
+      });
+    } catch (error) {
+      console.error('Failed to connect to the database:', error);
+      process.exit(1);
+    }
   }
+  
+startServer();
 }
 
-startServer();
+// Initialize DB on first load in production
+getDB().then(() => {
+  console.log('DB connection initialized for serverless environment');
+}).catch(err => {
+  console.error('Failed to initialize DB connection:', err);
+});
 
 module.exports = app;
