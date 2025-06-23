@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spending Tracker - Smart Expense Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary-color: #10b981;
+            --secondary-dark: #059669;
+            --danger-color: #ef4444;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--background);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: 
+                radial-gradient(at 40% 20%, hsla(245, 100%, 60%, 0.1) 0px, transparent 50%),
+                radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.1) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 0.1) 0px, transparent 50%);
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            max-height: 900px;
+            background: var(--surface);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(10px);
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            padding: 24px 32px;
+            background: var(--gradient);
+            color: white;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.3; }
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--surface-light) transparent;
+        }
+
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: var(--surface-light);
+            border-radius: 4px;
+        }
+
+        .message {
+            padding: 14px 18px;
+            border-radius: 18px;
+            max-width: 75%;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-out;
+            position: relative;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            background: var(--gradient);
+            color: white;
+            align-self: flex-end;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+
+        .bot-message {
+            background: var(--surface-light);
+            color: var(--text-primary);
+            align-self: flex-start;
+            border: 1px solid var(--border-color);
+        }
+
+        .bot-message.welcome {
+            background: linear-gradient(135deg, var(--surface-light), var(--surface));
+            border: 1px solid var(--primary-color);
+        }
+
+        .image-message {
+            max-width: 320px;
+            padding: 8px;
+            background: var(--surface-light);
+            border: 1px solid var(--border-color);
+        }
+
+        .image-message img {
+            width: 100%;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .image-message img:hover {
+            transform: scale(1.02);
+        }
+
+        .input-container {
+            padding: 24px;
+            background: var(--background);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 14px 20px;
+            background: var(--surface);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 15px;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: var(--surface-light);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-secondary);
+        }
+
+        button {
+            padding: 14px 24px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: var(--surface-light);
+            color: var(--text-secondary);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .file-button {
+            background: var(--secondary-color);
+            padding: 14px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-button:hover {
+            background: var(--secondary-dark);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .file-button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .file-button:active::after {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* Dropdown styles */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background: var(--surface);
+            min-width: 200px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            bottom: 100%;
+            margin-bottom: 8px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+
+        .dropdown-content.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .dropdown-content button {
+            background: transparent;
+            color: var(--text-primary);
+            padding: 14px 20px;
+            display: block;
+            width: 100%;
+            text-align: left;
+            border: none;
+            border-radius: 0;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .dropdown-content button:hover {
+            background: var(--surface-light);
+            padding-left: 24px;
+        }
+
+        .dropdown-content button:first-child {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .image-preview {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+            padding: 12px;
+            background: var(--surface);
+            border-radius: 12px;
+            min-height: 60px;
+            align-items: center;
+            justify-content: flex-start;
+            border: 2px dashed var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .image-preview:empty {
+            display: none;
+        }
+
+        .image-preview.has-images {
+            border-style: solid;
+            background: var(--surface-light);
+        }
+
+        .preview-item {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            animation: zoomIn 0.3s ease-out;
+        }
+
+        @keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .preview-item:hover img {
+            border-color: var(--primary-color);
+            transform: scale(1.05);
+        }
+
+        .remove-image {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--danger-color);
+            color: white;
+            border: 2px solid var(--surface);
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            opacity: 0;
+        }
+
+        .preview-item:hover .remove-image {
+            opacity: 1;
+        }
+
+        .remove-image:hover {
+            background: #dc2626;
+            transform: scale(1.1);
+        }
+
+        .upload-type-indicator {
+            font-size: 13px;
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            background: var(--surface);
+            border-radius: 8px;
+            display: inline-block;
+            border: 1px solid var(--border-color);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .upload-type-indicator:empty {
+            display: none;
+        }
+
+        .upload-type-indicator.image-type {
+            border-color: var(--secondary-color);
+            color: var(--secondary-color);
+        }
+
+        .upload-type-indicator.receipt-type {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        /* Loading animation */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 16px 20px;
+            align-items: center;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 640px) {
+            .container {
+                width: 100%;
+                height: 100vh;
+                max-height: none;
+                border-radius: 0;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .message {
+                max-width: 85%;
+            }
+            
+            .input-container {
+                padding: 16px;
+            }
+            
+            .input-row {
+                flex-wrap: wrap;
+            }
+            
+            button {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+        }
+
+        /* Success animation */
+        @keyframes success {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.2);
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .success-icon {
+            display: inline-block;
+            animation: success 0.5s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Smart Spending Tracker</h1>
+            <p>Track expenses effortlessly with AI-powered receipt scanning</p>
+        </div>
+        
+        <div id="chatContainer" class="chat-container">
+            <div class="message bot-message welcome">
+                <div style="margin-bottom: 8px;">👋 Welcome! I'm your personal expense assistant.</div>
+                <div style="font-size: 14px; opacity: 0.9;">
+                    💡 You can:
+                    <br>• Tell me about your expenses (e.g., "Spent $50 on groceries")
+                    <br>• Upload receipts for automatic processing 🧾
+                    <br>• Save images to your gallery 📸
+                </div>
+            </div>
+        </div>
+        
+        <div class="input-container">
+            <div class="image-preview" id="imagePreview"></div>
+            <div class="upload-type-indicator" id="uploadTypeIndicator"></div>
+            <div class="input-row">
+                <input 
+                    type="text" 
+                    id="userInput" 
+                    placeholder="Type your expense or describe your receipt..."
+                    autofocus
+                >
+                <div class="dropdown">
+                    <button class="file-button" id="fileButton">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                    </button>
+                    <div class="dropdown-content" id="dropdownContent">
+                        <button id="uploadImageBtn">📸 Upload to Gallery</button>
+                        <button id="uploadReceiptBtn">🧾 Process Receipt</button>
+                    </div>
+                </div>
+                <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+                <button id="sendBtn">
+                    <span>Send</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chatContainer');
+        const userInput = document.getElementById('userInput');
+        const imageInput = document.getElementById('imageInput');
+        const fileButton = document.getElementById('fileButton');
+        const sendBtn = document.getElementById('sendBtn');
+        const imagePreview = document.getElementById('imagePreview');
+        const dropdownContent = document.getElementById('dropdownContent');
+        const uploadImageBtn = document.getElementById('uploadImageBtn');
+        const uploadReceiptBtn = document.getElementById('uploadReceiptBtn');
+        const uploadTypeIndicator = document.getElementById('uploadTypeIndicator');
+        
+        let selectedImages = [];
+        let uploadType = null;
+
+        // Toggle dropdown with animation
+        fileButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = dropdownContent.classList.contains('show');
+            
+            if (!isOpen) {
+                dropdownContent.style.display = 'block';
+                setTimeout(() => {
+                    dropdownContent.classList.add('show');
+                }, 10);
+            } else {
+                dropdownContent.classList.remove('show');
+                setTimeout(() => {
+                    dropdownContent.style.display = 'none';
+                }, 300);
+            }
+        });
+
+        // Close dropdown when clicking outside
+        window.addEventListener('click', () => {
+            if (dropdownContent.classList.contains('show')) {
+                dropdownContent.classList.remove('show');
+                setTimeout(() => {
+                    dropdownContent.style.display = 'none';
+                }, 300);
+            }
+        });
+
+        // Handle upload image option
+        uploadImageBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            uploadType = 'image';
+            dropdownContent.classList.remove('show');
+            setTimeout(() => {
+                dropdownContent.style.display = 'none';
+            }, 300);
+            imageInput.click();
+        });
+
+        // Handle upload receipt option
+        uploadReceiptBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            uploadType = 'receipt';
+            dropdownContent.classList.remove('show');
+            setTimeout(() => {
+                dropdownContent.style.display = 'none';
+            }, 300);
+            imageInput.click();
+        });
+
+        // Handle image selection
+        imageInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const exists = selectedImages.some(img => img.name === file.name && img.size === file.size);
+                    if (!exists) {
+                        selectedImages.push(file);
+                        displayImagePreview(file);
+                    }
+                }
+            });
+            
+            // Update upload type indicator
+            if (selectedImages.length > 0 && uploadType) {
+                uploadTypeIndicator.textContent = uploadType === 'image' 
+                    ? '📸 Images will be saved to gallery' 
+                    : '🧾 Receipts will be processed for expenses';
+                uploadTypeIndicator.className = `upload-type-indicator ${uploadType}-type`;
+            }
+            
+            // Update preview container
+            if (selectedImages.length > 0) {
+                imagePreview.classList.add('has-images');
+            }
+            
+            e.target.value = '';
+        });
+
+        function displayImagePreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'preview-item';
+                previewItem.setAttribute('data-filename', file.name);
+                previewItem.innerHTML = `
+                    <img src="${e.target.result}" alt="Preview">
+                    <button class="remove-image" onclick="removeImage('${file.name}')">×</button>
+                `;
+                imagePreview.appendChild(previewItem);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        window.removeImage = (fileName) => {
+            selectedImages = selectedImages.filter(img => img.name !== fileName);
+            const previewElement = document.querySelector(`[data-filename="${fileName}"]`);
+            if (previewElement) {
+                previewElement.style.animation = 'zoomOut 0.3s ease-out';
+                setTimeout(() => {
+                    previewElement.remove();
+                    if (selectedImages.length === 0) {
+                        imagePreview.classList.remove('has-images');
+                        uploadTypeIndicator.textContent = '';
+                        uploadTypeIndicator.className = 'upload-type-indicator';
+                        uploadType = null;
+                    }
+                }, 300);
+            }
+        };
+
+        // Send message
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            const hasImages = selectedImages.length > 0;
+            const isSimpleImageUpload = hasImages && uploadType === 'image' && !message;
+            
+            if (!message && !hasImages) return;
+
+            if (message) {
+                addMessage(message, 'user');
+            }
+            
+            if (hasImages) {
+                for (const file of selectedImages) {
+                    await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            addImageMessage(e.target.result, 'user');
+                            resolve();
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                }
+            }
+            
+            userInput.value = '';
+            sendBtn.disabled = true;
+            
+            const loadingMsg = addTypingIndicator();
+
+            try {
+                const formData = new FormData();
+                formData.append('message', message || 'Receipt image uploaded');
+                formData.append('uploadType', uploadType || 'receipt');
+                
+                selectedImages.forEach((image) => {
+                    formData.append('images', image);
+                });
+
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                loadingMsg.remove();
+
+                if (response.ok) {
+                    if (data.uploadType === 'image') {
+                        addMessage(
+                            `<span class="success-icon">✅</span> ${data.message}`, 
+                            'bot',
+                            true
+                        );
+                    } else {
+                        const aiResponse = data.aiResponse.choices[0].message.content;
+                        addMessage(`💡 ${aiResponse}`, 'bot', true);
+                        
+                        if (data.savedExpenses && data.savedExpenses.length > 0) {
+                            let expenseHtml = '<div style="margin-top: 8px; padding: 12px; background: rgba(99, 102, 241, 0.1); border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.2);">';
+                            expenseHtml += '<strong style="color: #818cf8;">📊 Saved Expenses:</strong><br>';
+                            data.savedExpenses.forEach(exp => {
+                                expenseHtml += `<div style="margin-top: 4px;">• $${exp.amount} - ${exp.category} ${exp.hasImage ? '📷' : ''}</div>`;
+                            });
+                            expenseHtml += '</div>';
+                            addMessage(expenseHtml, 'bot', true);
+                        }
+                    }
+                } else {
+                    addMessage('❌ Error: ' + (data.error || 'Failed to process'), 'bot');
+                }
+            } catch (error) {
+                loadingMsg.remove();
+                addMessage('❌ Error: Failed to connect to server', 'bot');
+                console.error('Error:', error);
+            } finally {
+                sendBtn.disabled = false;
+                userInput.focus();
+                selectedImages = [];
+                imagePreview.innerHTML = '';
+                imagePreview.classList.remove('has-images');
+                uploadTypeIndicator.textContent = '';
+                uploadTypeIndicator.className = 'upload-type-indicator';
+                uploadType = null;
+            }
+        }
+
+        function addMessage(text, type, isHtml = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message`;
+            if (isHtml) {
+                messageDiv.innerHTML = text;
+            } else {
+                messageDiv.textContent = text;
+            }
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return messageDiv;
+        }
+
+        function addImageMessage(src, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}-message image-message`;
+            messageDiv.innerHTML = `<img src="${src}" alt="Uploaded image" onclick="window.open('${src}', '_blank')">`;
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function addTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot-message typing-indicator';
+            typingDiv.innerHTML = '<span></span><span></span><span></span>';
+            chatContainer.appendChild(typingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            return typingDiv;
+        }
+
+        // Add zoom out animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes zoomOut {
+                from {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+                to {
+                    opacity: 0;
+                    transform: scale(0.8);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
